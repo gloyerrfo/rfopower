@@ -1,0 +1,11 @@
+# ignore the Adafruit_IO_Python git clone
+Adafruit_IO_Python/**
+
+# ignore the pycache
+__pycache__
+
+# ignore the ekmmeters git clone
+ekmmeters/**
+
+# ignore the rfopower.log file
+rfopower.log

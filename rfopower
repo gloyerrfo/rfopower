@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""
+rfopower.py
+    This python program interfaces a Raspberry pi to an 
+    EKM Omnimeter 1v.3.  The interface is from the Pi USB
+    port to the Omnimeter RS485 via a USB-RS485 converter
+    from EKM. The EKM communication protocol over this
+    interface is a two-wire duplex mode and requires 
+    something like an FTDI serial interface chip to handle
+    the duplex send and receive without collisions.
+"""
+
+import time                     # for delay
+from Adafruit_IO import Client, Feed, Data, RequestError  # for REST client to send data to adafruit.io
+from ekmmeters import *         # ekmmeters python library for talking to omnimeter
+import json                     # for json string parsing
+
+# SETUP
+# create a REST client for adafruit.io
+# first argument is username, second argument is adafruit.io key
+ADAFRUIT_IO_KEY = 'bf5ae028f12029bee60d467afe56674c92e1b08d'
+ADAFRUIT_IO_USERNAME = 'georgel1'
+aio = Client(ADAFRUIT_IO_USERNAME, ADAFRUIT_IO_KEY)
+RFO_LOG = '/home/pi/Projects/ekm/rfopower.log'
+
+def rfo_print_log(log_string):
+    """
+    print log strings to a standard log file
+    """
+    logfile = open(RFO_LOG, "a")        # append only to the file
+    logfile.write(log_string)           # add the string to the log file
+    logfile.write("\n")                 # add a newline
+    logfile.close()
+    pass
+
+# reporting the start of the app in the log
+rfo_print_log("\n")
+rfo_print_log("STARTING RFOPOWER")
+rfo_print_log("\n\n")
+rfo_print_log("==============================")
+
+# setup feeds
+try:
+    rfo_kwh = aio.feeds('rfo-kwh')
+except RequestError:
+    feed = Feed(name="rfo-kwh")
+    rfo_kwh = aio.create_feed(feed)
+
+try:
+    rfo_rms_volts_ln_1 = aio.feeds('rfo-rms-volts-ln-1')
+except RequestError:
+    feed = Feed(name="rfo-rms-volts-ln-1")
+    rfo_rms_volts_ln_1 = aio.create_feed(feed)
+
+try:
+    rfo_rms_volts_ln_2 = aio.feeds('rfo-rms-volts-ln-2')
+except RequestError:
+    feed = Feed(name="rfo-rms-volts-ln-2")
+    rfo_rms_volts_ln_2 = aio.create_feed(feed)
+
+try:
+    rfo_amps_ln_1 = aio.feeds('rfo-amps-ln-1')
+except RequestError:
+    feed = Feed(name="rfo-amps-ln-1")
+    rfo_amps_ln_1 = aio.create_feed(feed)
+
+try:
+    rfo_amps_ln_2 = aio.feeds('rfo-amps-ln-2')
+except RequestError:
+    feed = Feed(name="rfo-amps-ln-2")
+    rfo_amps_ln_2 = aio.create_feed(feed)
+
+try:
+    rfo_rms_watts_ln_1 = aio.feeds('rfo-rms-watts-ln-1')
+except RequestError:
+    feed = Feed(name="rfo-rms-watts-ln-1")
+    rfo_rms_watts_ln_1 = aio.create_feed(feed)
+
+try:
+    rfo_rms_watts_ln_2 = aio.feeds('rfo-rms-watts-ln-2')
+except RequestError:
+    feed = Feed(name="rfo-rms-watts-ln-2")
+    rfo_rms_watts_ln_2 = aio.create_feed(feed)
+
+my_port_name = "/dev/ttyUSB0"
+# run lsusb -t to find USB ports, ls /dev/tty* to find device name
+
+my_meter_address = "000000032943"   # serial number printed on the meter
+
+ekm_set_log(rfo_print_log)
+port = SerialPort(my_port_name)
+
+# open the RS485 port to the Omnimeter
+if (port.initPort() == True):
+    my_meter = V3Meter(my_meter_address)
+    my_meter.attachPort(port)
+else:
+    print ("Cannot open port")
+    exit()
+
+# a new Omnimeter defaults to 200A, our circuit panel is 100A
+if my_meter.request():
+    ct_str = my_meter.getField(Field.CT_Ratio)
+    # rfo_print_log ("DEBUG: CT is " + ct_str)         # debug
+    if (ct_str != "100"):
+        if my_meter.setCTRatio(CTRatio.Amps_100, password='00000000'):
+            rfo_print_log ("Successfully set CTRatio to 100")     # debug
+        else:
+            rfo_print_log ("NONFATAL ERROR: CT is still ", ct_str, ". Failed to update to 100")
+
+# LOOP
+# main read and report loop
+while True:
+    if my_meter.request():
+        my_read_buffer = my_meter.getReadBuffer()
+        json_str = my_meter.jsonRender(my_read_buffer)
+        # rfo_print_log (json_str)          # debug print statement
+        rfo_field = json.loads(json_str)        # convert json string to dictionary
+        # rfo_print_log ("DEBUG: kWh Total: ", float(rfo_field["kWh_Tot"]))        # debug
+        # rfo_print_log ("DEBUG: Amps Line 1: ", float(rfo_field["Amps_Ln_1"]))      # debug
+        # rfo_print_log ("DEBUG: RMS Volts Line 1: ", float(rfo_field["RMS_Volts_Ln_1"]))        # debug
+    
+    	# Send to an adafruit.io feed a numeric value
+        aio.send_data(rfo_kwh.key, float(rfo_field["kWh_Tot"]))
+        aio.send_data(rfo_rms_volts_ln_1.key, float(rfo_field["RMS_Volts_Ln_1"]))
+    	# aio.send_data(rfo_rms_volts_ln_2.key, float(rfo_field["RMS_Volts_Ln_2"]))
+        aio.send_data(rfo_amps_ln_1.key, float(rfo_field["Amps_Ln_1"]))
+        # aio.send_data(rfo_amps_ln_2.key, float(rfo_field["Amps_Ln_2"]))
+        aio.send_data(rfo_rms_watts_ln_1.key, float(rfo_field["RMS_Watts_Ln_1"]))
+        # aio.send_data(rfo_rms_watts_ln_2.key, float(rfo_field["RMS_Watts_Ln_2"]))
+        rfo_print_log (rfo_field["Meter_Time"])
+        time.sleep(60)
+
+port.closePort()
