@@ -18,8 +18,8 @@ import json                     # for json string parsing
 # SETUP
 # create a REST client for adafruit.io
 # first argument is username, second argument is adafruit.io key
-ADAFRUIT_IO_KEY = 'bf5ae028f12029bee60d467afe56674c92e1b08d'
 ADAFRUIT_IO_USERNAME = 'georgel1'
+ADAFRUIT_IO_KEY = 'bf5ae028f12029bee60d467afe56674c92e1b08d'
 aio = Client(ADAFRUIT_IO_USERNAME, ADAFRUIT_IO_KEY)
 RFO_LOG = '/home/pi/Projects/ekm/rfopower.log'
 
@@ -28,16 +28,15 @@ def rfo_print_log(log_string):
     print log strings to a standard log file
     """
     logfile = open(RFO_LOG, "a")        # append only to the file
-    logfile.write(log_string)           # add the string to the log file
-    logfile.write("\n")                 # add a newline
+    logfile.write(time.strftime("%Y-%m-%d %H:%M:%S"))       # print the timestamp
+    logfile.write("\t")                 # print a tab
+    logfile.write(log_string)           # print the string to the log file
+    logfile.write("\n")                 # print a newline
     logfile.close()
-    pass
+    return
 
 # reporting the start of the app in the log
-rfo_print_log("\n")
 rfo_print_log("STARTING RFOPOWER")
-rfo_print_log("\n\n")
-rfo_print_log("==============================")
 
 # setup feeds
 try:
