@@ -1,0 +1,28 @@
+################################################################################
+# rfopower.service
+#
+# This service unit is for systemd startup of rfopower
+# By George Loyer
+# after David Roth
+# Licensed under GPL V2
+#
+################################################################################
+# This configuration file is in the rfopower project at /home/pi/Projects/ekm
+# Create a symlink to it from the /usr/local/lib/systemd/system directory.
+# Create a symlink to it from the /etc/systemd/system directory.
+################################################################################
+
+[Unit]
+Description=Runs /usr/local/bin/run-rfopower.sh
+After=network.target
+StartLimitIntervalSec=0
+  
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=pi
+ExecStart=/usr/local/bin/run-rfopower.sh
+
+[Install]
+WantedBy=multi-user.target
