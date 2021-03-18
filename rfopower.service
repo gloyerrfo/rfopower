@@ -18,10 +18,11 @@ After=network.target
 StartLimitIntervalSec=0
   
 [Service]
-Type=simple
+Type=forking
+PIDFile=/run/rfopower.pid
 Restart=always
-RestartSec=1
-User=pi
+RestartSec=10
+User=root
 ExecStart=/usr/local/bin/run-rfopower.sh
 
 [Install]

@@ -10,83 +10,113 @@ rfopower.py
     the duplex send and receive without collisions.
 """
 
-import time                     # for delay
+import os                       # for process id and PID file
+import time                     # for delay and datetime stamp in log
 from Adafruit_IO import Client, Feed, Data, RequestError  # for REST client to send data to adafruit.io
 from ekmmeters import *         # ekmmeters python library for talking to omnimeter
 import json                     # for json string parsing
 
-# SETUP
-# create a REST client for adafruit.io
-# first argument is username, second argument is adafruit.io key
+# Setup static variables
 ADAFRUIT_IO_USERNAME = 'georgel1'
 ADAFRUIT_IO_KEY = 'bf5ae028f12029bee60d467afe56674c92e1b08d'
-aio = Client(ADAFRUIT_IO_USERNAME, ADAFRUIT_IO_KEY)
+RFO_PID = '/run/rfopower.pid'
 RFO_LOG = '/home/pi/Projects/ekm/rfopower.log'
+
+# create a REST client for adafruit.io
+# first argument is username, second argument is adafruit.io key
+aio = Client(ADAFRUIT_IO_USERNAME, ADAFRUIT_IO_KEY)
 
 def rfo_print_log(log_string):
     """
     print log strings to a standard log file
     """
-    logfile = open(RFO_LOG, "a")        # append only to the file
-    logfile.write(time.strftime("%Y-%m-%d %H:%M:%S"))       # print the timestamp
-    logfile.write("\t")                 # print a tab
-    logfile.write(log_string)           # print the string to the log file
-    logfile.write("\n")                 # print a newline
-    logfile.close()
-    return
+    try:
+        with open(RFO_LOG, "a") as logfile:                            # append only to the file
+            logfile.write(time.strftime("%Y-%m-%d %H:%M:%S"))       # print the timestamp
+            logfile.write("\t")                                     # print a tab
+            logfile.write(log_string)                               # print the string to the log file
+            logfile.write("\n")                                     # print a newline
+    except IOError as e:                                            # catch IO errors
+        print ("Error opening log file")                            # must write errors to STDOUT
+        print (e)
+    return                                                          # allow all other errors to crash
 
 # reporting the start of the app in the log
 rfo_print_log("STARTING RFOPOWER")
 
+# write the process id in rfopower.pid for systemd forking
+try:
+   with open(RFO_PID, "w+") as pidfile:                             # write or create pidfile
+        pidfile.write(str(os.getpid()))
+        rfo_print_log("Wrote pid to pidfile")
+except IOError as e:                                                # catch IO errors
+    rfo_print_log(e)
+except:
+    rfo_print_log("Unknown error occurred writing to pid file.")
+
 # setup feeds
 try:
-    rfo_kwh = aio.feeds('rfo-kwh')
+    rfo_kwh = aio.feeds('rfo-kwh')                                  # check for feed name
 except RequestError:
-    feed = Feed(name="rfo-kwh")
-    rfo_kwh = aio.create_feed(feed)
+    feed = Feed(name="rfo-kwh")                                     # on RequestError, create feed
+    rfo_kwh = aio.create_feed(feed)                                 # what exceptions from Feed and aio.create_feed()?
+except:
+    rfo_print_log("Unknown error from aio.feeds")
 
 try:
     rfo_rms_volts_ln_1 = aio.feeds('rfo-rms-volts-ln-1')
 except RequestError:
     feed = Feed(name="rfo-rms-volts-ln-1")
     rfo_rms_volts_ln_1 = aio.create_feed(feed)
+except:
+    rfo_print_log("Unknown error from aio.feeds")
 
 try:
     rfo_rms_volts_ln_2 = aio.feeds('rfo-rms-volts-ln-2')
 except RequestError:
     feed = Feed(name="rfo-rms-volts-ln-2")
     rfo_rms_volts_ln_2 = aio.create_feed(feed)
+except:
+    rfo_print_log("Unknown error from aio.feeds")
 
 try:
     rfo_amps_ln_1 = aio.feeds('rfo-amps-ln-1')
 except RequestError:
     feed = Feed(name="rfo-amps-ln-1")
     rfo_amps_ln_1 = aio.create_feed(feed)
+except:
+    rfo_print_log("Unknown error from aio.feeds")
 
 try:
     rfo_amps_ln_2 = aio.feeds('rfo-amps-ln-2')
 except RequestError:
     feed = Feed(name="rfo-amps-ln-2")
     rfo_amps_ln_2 = aio.create_feed(feed)
+except:
+    rfo_print_log("Unknown error from aio.feeds")
 
 try:
     rfo_rms_watts_ln_1 = aio.feeds('rfo-rms-watts-ln-1')
 except RequestError:
     feed = Feed(name="rfo-rms-watts-ln-1")
     rfo_rms_watts_ln_1 = aio.create_feed(feed)
+except:
+    rfo_print_log("Unknown error from aio.feeds")
 
 try:
     rfo_rms_watts_ln_2 = aio.feeds('rfo-rms-watts-ln-2')
 except RequestError:
     feed = Feed(name="rfo-rms-watts-ln-2")
     rfo_rms_watts_ln_2 = aio.create_feed(feed)
+except:
+    rfo_print_log("Unknown error from aio.feeds")
 
 my_port_name = "/dev/ttyUSB0"
 # run lsusb -t to find USB ports, ls /dev/tty* to find device name
 
-my_meter_address = "000000032943"   # serial number printed on the meter
+my_meter_address = "000000032943"                       # serial number printed on the meter
 
-ekm_set_log(rfo_print_log)
+ekm_set_log(rfo_print_log)                              # set up log function
 port = SerialPort(my_port_name)
 
 # open the RS485 port to the Omnimeter
@@ -98,11 +128,11 @@ else:
     exit()
 
 # a new Omnimeter defaults to 200A, our circuit panel is 100A
-if my_meter.request():
-    ct_str = my_meter.getField(Field.CT_Ratio)
-    # rfo_print_log ("DEBUG: CT is " + ct_str)         # debug
+if my_meter.request():                                  # what errors can ekm.request() throw?
+    ct_str = my_meter.getField(Field.CT_Ratio)          # what errors can ekm.getField() throw?
+    # rfo_print_log ("DEBUG: CT is " + ct_str)          # debug
     if (ct_str != "100"):
-        if my_meter.setCTRatio(CTRatio.Amps_100, password='00000000'):
+        if my_meter.setCTRatio(CTRatio.Amps_100, password='00000000'):  # what errors from ekm.setCTRatio()?
             rfo_print_log ("Successfully set CTRatio to 100")     # debug
         else:
             rfo_print_log ("NONFATAL ERROR: CT is still ", ct_str, ". Failed to update to 100")
@@ -110,7 +140,7 @@ if my_meter.request():
 # LOOP
 # main read and report loop
 while True:
-    if my_meter.request():
+    if my_meter.request():                              # handle the request exceptions
         my_read_buffer = my_meter.getReadBuffer()
         json_str = my_meter.jsonRender(my_read_buffer)
         # rfo_print_log (json_str)          # debug print statement
@@ -120,13 +150,34 @@ while True:
         # rfo_print_log ("DEBUG: RMS Volts Line 1: ", float(rfo_field["RMS_Volts_Ln_1"]))        # debug
     
     	# Send to an adafruit.io feed a numeric value
-        aio.send_data(rfo_kwh.key, float(rfo_field["kWh_Tot"]))
-        aio.send_data(rfo_rms_volts_ln_1.key, float(rfo_field["RMS_Volts_Ln_1"]))
-    	# aio.send_data(rfo_rms_volts_ln_2.key, float(rfo_field["RMS_Volts_Ln_2"]))
-        aio.send_data(rfo_amps_ln_1.key, float(rfo_field["Amps_Ln_1"]))
-        # aio.send_data(rfo_amps_ln_2.key, float(rfo_field["Amps_Ln_2"]))
-        aio.send_data(rfo_rms_watts_ln_1.key, float(rfo_field["RMS_Watts_Ln_1"]))
-        # aio.send_data(rfo_rms_watts_ln_2.key, float(rfo_field["RMS_Watts_Ln_2"]))
+        try:
+            aio.send_data(rfo_kwh.key, float(rfo_field["kWh_Tot"]))
+        except RequestError as e:
+            rfo_print_log(e)
+        except:
+            rfo_print_log("Unknown error from aio.send()")
+
+        try:
+            aio.send_data(rfo_rms_volts_ln_1.key, float(rfo_field["RMS_Volts_Ln_1"]))
+        except RequestError as e:
+            rfo_print_log(e)
+        except:
+            rfo_print_log("Unknown error from aio.send()")
+
+        try:
+            aio.send_data(rfo_amps_ln_1.key, float(rfo_field["Amps_Ln_1"]))
+        except RequestError as e:
+            rfo_print_log(e)
+        except:
+            rfo_print_log("Unknown error from aio.send()")
+
+        try:
+            aio.send_data(rfo_rms_watts_ln_1.key, float(rfo_field["RMS_Watts_Ln_1"]))
+        except RequestError as e:
+            rfo_print_log(e)
+        except:
+            rfo_print_log("Unknown error from aio.send()")
+
         rfo_print_log (rfo_field["Meter_Time"])
         time.sleep(60)
 
