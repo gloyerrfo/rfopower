@@ -11,6 +11,7 @@ rfopower.py
 """
 
 import os                       # for process id and PID file
+import urllib                   # for checking that internet access is available
 import time                     # for delay and datetime stamp in log
 from Adafruit_IO import Client, Feed, Data, RequestError  # for REST client to send data to adafruit.io
 from ekmmeters import *         # ekmmeters python library for talking to omnimeter
@@ -25,6 +26,8 @@ RFO_LOG = '/home/pi/Projects/ekm/rfopower.log'
 # create a REST client for adafruit.io
 # first argument is username, second argument is adafruit.io key
 aio = Client(ADAFRUIT_IO_USERNAME, ADAFRUIT_IO_KEY)
+aiofaillimit = 5
+aiofails = 0
 
 def rfo_print_log(log_string):
     """
@@ -34,12 +37,28 @@ def rfo_print_log(log_string):
         with open(RFO_LOG, "a") as logfile:                            # append only to the file
             logfile.write(time.strftime("%Y-%m-%d %H:%M:%S"))       # print the timestamp
             logfile.write("\t")                                     # print a tab
+            logfile.write("[")                                      # print the process pid in square brackets
+            logfile.write(str(os.getpid()))
+            logfile.write("] ")
             logfile.write(log_string)                               # print the string to the log file
             logfile.write("\n")                                     # print a newline
     except IOError as e:                                            # catch IO errors
         print ("Error opening log file")                            # must write errors to STDOUT
         print (e)
     return                                                          # allow all other errors to crash
+
+def wait_for_internet():
+    """
+    waiting for access to the internet
+    """
+    while True:
+        try:
+            response = urllib.request.urlopen('http://www.google.com', data=None, timeout=2)
+            return
+        except urllib.error.URLError as e:
+            rfo_print_log(str(e.reason))
+            time.sleep(8)
+            pass
 
 # reporting the start of the app in the log
 rfo_print_log("STARTING RFOPOWER")
@@ -53,6 +72,10 @@ except IOError as e:                                                # catch IO e
     rfo_print_log(e)
 except:
     rfo_print_log("Unknown error occurred writing to pid file.")
+
+rfo_print_log("Waiting for internet on startup...")
+wait_for_internet()
+rfo_print_log("Internet connection is live.")
 
 # setup feeds
 try:
@@ -116,16 +139,16 @@ my_port_name = "/dev/ttyUSB0"
 
 my_meter_address = "000000032943"                       # serial number printed on the meter
 
-ekm_set_log(rfo_print_log)                              # set up log function
+ekm_set_log(rfo_print_log)                              # set up log function for ekm debug output
 port = SerialPort(my_port_name)
 
 # open the RS485 port to the Omnimeter
-if (port.initPort() == True):
+if (port.initPort() == True):                           # need better error recovery approach
     my_meter = V3Meter(my_meter_address)
     my_meter.attachPort(port)
 else:
-    print ("Cannot open port")
-    exit()
+    rfo_print_log("Cannot open port to Omnimeter")
+    exit(1)
 
 # a new Omnimeter defaults to 200A, our circuit panel is 100A
 if my_meter.request():                                  # what errors can ekm.request() throw?
@@ -149,13 +172,14 @@ while True:
         # rfo_print_log ("DEBUG: Amps Line 1: ", float(rfo_field["Amps_Ln_1"]))      # debug
         # rfo_print_log ("DEBUG: RMS Volts Line 1: ", float(rfo_field["RMS_Volts_Ln_1"]))        # debug
     
-    	# Send to an adafruit.io feed a numeric value
+    	# Send to an adafruit.io feed a numeric value for each data element
         try:
             aio.send_data(rfo_kwh.key, float(rfo_field["kWh_Tot"]))
         except RequestError as e:
             rfo_print_log(e)
         except:
             rfo_print_log("Unknown error from aio.send()")
+            aiofails += 1                                   # increment the error counter once per cycle
 
         try:
             aio.send_data(rfo_rms_volts_ln_1.key, float(rfo_field["RMS_Volts_Ln_1"]))
@@ -179,6 +203,11 @@ while True:
             rfo_print_log("Unknown error from aio.send()")
 
         rfo_print_log (rfo_field["Meter_Time"])
+        if aiofails >= aiofaillimit:
+            rfo_print_log("AIO failures exceeded the limit - waiting for internet service to be restored.")
+            wait_for_internet()
+            aiofails = 0
+            rfo_print_log("Internet back up, resuming.")
         time.sleep(60)
 
 port.closePort()
