@@ -34,9 +34,9 @@ def rfo_print_log(log_string):
     print log strings to a standard log file
     """
     try:
-        with open(RFO_LOG, "a") as logfile:                            # append only to the file
+        with open(RFO_LOG, "a") as logfile:                         # append only to the file
             logfile.write(time.strftime("%Y-%m-%d %H:%M:%S"))       # print the timestamp
-            logfile.write("\t")                                     # print a tab
+            logfile.write(" ")
             logfile.write("[")                                      # print the process pid in square brackets
             logfile.write(str(os.getpid()))
             logfile.write("] ")
@@ -202,6 +202,27 @@ while True:
         except:
             rfo_print_log("Unknown error from aio.send()")
 
+        try:
+            aio.send_data(rfo_rms_volts_ln_2.key, float(rfo_field["RMS_Volts_Ln_2"]))
+        except RequestError as e:
+            rfo_print_log(e)
+        except:
+            rfo_print_log("Unknown error from aio.send()")
+
+        try:
+            aio.send_data(rfo_amps_ln_2.key, float(rfo_field["Amps_Ln_2"]))
+        except RequestError as e:
+            rfo_print_log(e)
+        except:
+            rfo_print_log("Unknown error from aio.send()")
+
+        try:
+            aio.send_data(rfo_rms_watts_ln_2.key, float(rfo_field["RMS_Watts_Ln_2"]))
+        except RequestError as e:
+            rfo_print_log(e)
+        except:
+            rfo_print_log("Unknown error from aio.send()")
+        
         rfo_print_log (rfo_field["Meter_Time"])
         if aiofails >= aiofaillimit:
             rfo_print_log("AIO failures exceeded the limit - waiting for internet service to be restored.")
