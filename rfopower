@@ -150,15 +150,15 @@ else:
     rfo_print_log("Cannot open port to Omnimeter")
     exit(1)
 
-# a new Omnimeter defaults to 200A, our circuit panel is 100A
+# a new Omnimeter defaults to 200A for CT, that's what we use
 if my_meter.request():                                  # what errors can ekm.request() throw?
     ct_str = my_meter.getField(Field.CT_Ratio)          # what errors can ekm.getField() throw?
     # rfo_print_log ("DEBUG: CT is " + ct_str)          # debug
-    if (ct_str != "100"):
-        if my_meter.setCTRatio(CTRatio.Amps_100, password='00000000'):  # what errors from ekm.setCTRatio()?
-            rfo_print_log ("Successfully set CTRatio to 100")     # debug
+    if (ct_str != "200"):
+        if my_meter.setCTRatio(CTRatio.Amps_200, password='00000000'):  # what errors from ekm.setCTRatio()?
+            rfo_print_log ("Successfully set CTRatio to 200")     # debug
         else:
-            rfo_print_log ("NONFATAL ERROR: CT is still ", ct_str, ". Failed to update to 100")
+            rfo_print_log ("NONFATAL ERROR: CT is still ", ct_str, ". Failed to update to 200")
 
 # LOOP
 # main read and report loop
