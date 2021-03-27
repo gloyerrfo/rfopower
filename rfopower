@@ -158,7 +158,7 @@ if my_meter.request():                                  # what errors can ekm.re
         if my_meter.setCTRatio(CTRatio.Amps_200, password='00000000'):  # what errors from ekm.setCTRatio()?
             rfo_print_log ("Successfully set CTRatio to 200")     # debug
         else:
-            rfo_print_log ("NONFATAL ERROR: CT is still ", ct_str, ". Failed to update to 200")
+            rfo_print_log ("NONFATAL ERROR: CT is still %s. Failed to update to 200." %  (ct_str))
 
 # LOOP
 # main read and report loop
