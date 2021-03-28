@@ -143,7 +143,7 @@ ekm_set_log(rfo_print_log)                              # set up log function fo
 port = SerialPort(my_port_name)
 
 # open the RS485 port to the Omnimeter
-if (port.initPort() == True):                           # need better error recovery approach
+if port.initPort() == True:                           # need better error recovery approach
     my_meter = V3Meter(my_meter_address)
     my_meter.attachPort(port)
 else:
@@ -154,7 +154,7 @@ else:
 if my_meter.request():                                  # what errors can ekm.request() throw?
     ct_str = my_meter.getField(Field.CT_Ratio)          # what errors can ekm.getField() throw?
     # rfo_print_log ("DEBUG: CT is " + ct_str)          # debug
-    if (ct_str != "200"):
+    if ct_str != "200":
         if my_meter.setCTRatio(CTRatio.Amps_200, password='00000000'):  # what errors from ekm.setCTRatio()?
             rfo_print_log ("Successfully set CTRatio to 200")     # debug
         else:
