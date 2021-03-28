@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 rfopower.py
-    This python program interfaces a Raspberry pi to an 
+    This python program interfaces a Raspberry pi to an
     EKM Omnimeter 1v.3.  The interface is from the Pi USB
     port to the Omnimeter RS485 via a USB-RS485 converter
     from EKM. The EKM communication protocol over this
-    interface is a two-wire duplex mode and requires 
+    interface is a two-wire duplex mode and requires
     something like an FTDI serial interface chip to handle
     the duplex send and receive without collisions.
 """
@@ -171,7 +171,7 @@ while True:
         # rfo_print_log ("DEBUG: kWh Total: ", float(rfo_field["kWh_Tot"]))        # debug
         # rfo_print_log ("DEBUG: Amps Line 1: ", float(rfo_field["Amps_Ln_1"]))      # debug
         # rfo_print_log ("DEBUG: RMS Volts Line 1: ", float(rfo_field["RMS_Volts_Ln_1"]))        # debug
-    
+
     	# Send to an adafruit.io feed a numeric value for each data element
         try:
             aio.send_data(rfo_kwh.key, float(rfo_field["kWh_Tot"]))
@@ -222,7 +222,7 @@ while True:
             rfo_print_log(e)
         except:
             rfo_print_log("Unknown error from aio.send()")
-        
+
         rfo_print_log (rfo_field["Meter_Time"])
         if aiofails >= aiofaillimit:
             rfo_print_log("AIO failures exceeded the limit - waiting for internet service to be restored.")
