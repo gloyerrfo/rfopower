@@ -10,12 +10,15 @@ rfopower.py
     the duplex send and receive without collisions.
 """
 
+# pylint: disable=E0401
+# pylint: disable=W0401 (wildcard-import)
+# pylint: disable=W0702 (bare-except)
 import os                       # for process id and PID file
 import urllib                   # for checking that internet access is available
 import time                     # for delay and datetime stamp in log
-from Adafruit_IO import Client, Feed, Data, RequestError  # REST client to send data 
-from ekmmeters import *         # ekmmeters python library for talking to omnimeter
 import json                     # for json string parsing
+from Adafruit_IO import Client, Feed, Data, RequestError  # REST client to send data
+from ekmmeters import *         # ekmmeters python library for talking to omnimeter
 
 # Setup static variables
 ADAFRUIT_IO_USERNAME = 'georgel1'
@@ -42,9 +45,9 @@ def rfo_print_log(log_string):
             logfile.write("] ")
             logfile.write(log_string)                               # print string to log file
             logfile.write("\n")                                     # print a newline
-    except IOError as e:                                            # catch IO errors
+    except IOError as err_str:                                            # catch IO errors
         print ("Error opening log file")                            # must write errors to STDOUT
-        print (e)
+        print (err_str)
 
 def wait_for_internet():
     """
@@ -54,8 +57,8 @@ def wait_for_internet():
         try:
             response = urllib.request.urlopen('http://www.google.com', data=None, timeout=2)
             return
-        except urllib.error.URLError as e:
-            rfo_print_log(str(e.reason))
+        except urllib.error.URLError as err_str:
+            rfo_print_log(str(err_str.reason))
             time.sleep(8)
 
 # reporting the start of the app in the log
@@ -63,11 +66,11 @@ rfo_print_log("STARTING RFOPOWER")
 
 # write the process id in rfopower.pid for systemd forking
 try:
-   with open(RFO_PID, "w+") as pidfile:                             # write or create pidfile
+    with open(RFO_PID, "w+") as pidfile:                             # write or create pidfile
         pidfile.write(str(os.getpid()))
         rfo_print_log("Wrote pid to pidfile")
-except IOError as e:                                                # catch IO errors
-    rfo_print_log(e)
+except IOError as err_str:                                                # catch IO errors
+    rfo_print_log(err_str)
 except:
     rfo_print_log("Unknown error occurred writing to pid file.")
 
@@ -141,7 +144,7 @@ ekm_set_log(rfo_print_log)                              # set up log function fo
 port = SerialPort(my_port_name)
 
 # open the RS485 port to the Omnimeter
-if port.initPort() == True:                           # need better error recovery approach
+if port.initPort():                           # need better error recovery approach
     my_meter = V3Meter(my_meter_address)
     my_meter.attachPort(port)
 else:
@@ -173,51 +176,51 @@ while True:
     	# Send to an adafruit.io feed a numeric value for each data element
         try:
             aio.send_data(rfo_kwh.key, float(rfo_field["kWh_Tot"]))
-        except RequestError as e:
-            rfo_print_log(e)
+        except RequestError as err_str:
+            rfo_print_log(err_str)
         except:
             rfo_print_log("Unknown error from aio.send()")
             aiofails += 1                       # increment the error counter once per cycle
 
         try:
             aio.send_data(rfo_rms_volts_ln_1.key, float(rfo_field["RMS_Volts_Ln_1"]))
-        except RequestError as e:
-            rfo_print_log(e)
+        except RequestError as err_str:
+            rfo_print_log(err_str)
         except:
             rfo_print_log("Unknown error from aio.send()")
 
         try:
             aio.send_data(rfo_amps_ln_1.key, float(rfo_field["Amps_Ln_1"]))
-        except RequestError as e:
-            rfo_print_log(e)
+        except RequestError as err_str:
+            rfo_print_log(err_str)
         except:
             rfo_print_log("Unknown error from aio.send()")
 
         try:
             aio.send_data(rfo_rms_watts_ln_1.key, float(rfo_field["RMS_Watts_Ln_1"]))
-        except RequestError as e:
-            rfo_print_log(e)
+        except RequestError as err_str:
+            rfo_print_log(err_str)
         except:
             rfo_print_log("Unknown error from aio.send()")
 
         try:
             aio.send_data(rfo_rms_volts_ln_2.key, float(rfo_field["RMS_Volts_Ln_2"]))
-        except RequestError as e:
-            rfo_print_log(e)
+        except RequestError as err_str:
+            rfo_print_log(err_str)
         except:
             rfo_print_log("Unknown error from aio.send()")
 
         try:
             aio.send_data(rfo_amps_ln_2.key, float(rfo_field["Amps_Ln_2"]))
-        except RequestError as e:
-            rfo_print_log(e)
+        except RequestError as err_str:
+            rfo_print_log(err_str)
         except:
             rfo_print_log("Unknown error from aio.send()")
 
         try:
             aio.send_data(rfo_rms_watts_ln_2.key, float(rfo_field["RMS_Watts_Ln_2"]))
-        except RequestError as e:
-            rfo_print_log(e)
+        except RequestError as err_str:
+            rfo_print_log(err_str)
         except:
             rfo_print_log("Unknown error from aio.send()")
 
