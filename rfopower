@@ -10,20 +10,12 @@ rfopower.py
     the duplex send and receive without collisions.
 """
 
-# pylint: disable=E0401
-# pylint: disable=W0401 (wildcard-import)
-# pylint: disable=W0702 (bare-except)
 import os                       # for process id and PID file
 import urllib                   # for checking that internet access is available
 import time                     # for delay and datetime stamp in log
-<<<<<<< HEAD
 from Adafruit_IO import Client, Feed, Data, RequestError  # for REST client to adafruit.io
 from ekmmeters import *         # ekmmeters python library for talking to omnimeter
-=======
->>>>>>> 67c86697847d6004cefb1ddbc02e9c5ba5ebfd11
 import json                     # for json string parsing
-from Adafruit_IO import Client, Feed, Data, RequestError  # REST client to send data
-from ekmmeters import *         # ekmmeters python library for talking to omnimeter
 
 # Setup static variables
 ADAFRUIT_IO_USERNAME = 'georgel1'
@@ -45,16 +37,6 @@ def rfo_print_log(log_string):
         with open(RFO_LOG, "a") as logfile:                         # append only to the file
             logfile.write(time.strftime("%Y-%m-%d %H:%M:%S"))       # print the timestamp
             logfile.write(" ")
-<<<<<<< HEAD
-            logfile.write("[")                              # print pid in square brackets
-            logfile.write(str(os.getpid()))
-            logfile.write("] ")
-            logfile.write(log_string)                       # print string to log file
-            logfile.write("\n")                             # print a newline
-    except IOError as e:                                    # catch IO errors
-        print ("Error opening log file")                    # must write errors to STDOUT
-        print (e)
-=======
             logfile.write("[")                                      # print the pid in brackets
             logfile.write(str(os.getpid()))
             logfile.write("] ")
@@ -63,7 +45,6 @@ def rfo_print_log(log_string):
     except IOError as err_str:                                            # catch IO errors
         print ("Error opening log file")                            # must write errors to STDOUT
         print (err_str)
->>>>>>> 67c86697847d6004cefb1ddbc02e9c5ba5ebfd11
 
 def wait_for_internet():
     """
@@ -98,13 +79,8 @@ rfo_print_log("Internet connection is live.")
 try:
     rfo_kwh = aio.feeds('rfo-kwh')                      # check for feed name
 except RequestError:
-<<<<<<< HEAD
-    feed = Feed(name="rfo-kwh")                         # on RequestError, create feed
-    rfo_kwh = aio.create_feed(feed)                     # what exceptions from Feed 
-=======
     feed = Feed(name="rfo-kwh")                                     # on RequestError, create feed
     rfo_kwh = aio.create_feed(feed)                                 # exceptions from Feed?
->>>>>>> 67c86697847d6004cefb1ddbc02e9c5ba5ebfd11
 except:
     rfo_print_log("Unknown error from aio.feeds")
 
@@ -165,11 +141,7 @@ ekm_set_log(rfo_print_log)                              # set up log function fo
 port = SerialPort(my_port_name)
 
 # open the RS485 port to the Omnimeter
-<<<<<<< HEAD
 if port.initPort() == True:                           # need better error recovery approach
-=======
-if port.initPort():                           # need better error recovery approach
->>>>>>> 67c86697847d6004cefb1ddbc02e9c5ba5ebfd11
     my_meter = V3Meter(my_meter_address)
     my_meter.attachPort(port)
 else:
@@ -181,11 +153,7 @@ if my_meter.request():                                  # what errors can ekm.re
     ct_str = my_meter.getField(Field.CT_Ratio)          # what errors can ekm.getField() throw?
     # rfo_print_log ("DEBUG: CT is " + ct_str)          # debug
     if ct_str != "200":
-<<<<<<< HEAD
-        if my_meter.setCTRatio(CTRatio.Amps_200, password='00000000'):  
-=======
         if my_meter.setCTRatio(CTRatio.Amps_200, password='00000000'):  # errors ekm.setCTRatio()?
->>>>>>> 67c86697847d6004cefb1ddbc02e9c5ba5ebfd11
             rfo_print_log ("Successfully set CTRatio to 200")     # debug
         else:
             rfo_print_log ("NONFATAL ERROR: CT is still %s. Failed to update to 200." %  (ct_str))
@@ -200,12 +168,7 @@ while True:
         rfo_field = json.loads(json_str)        # convert json string to dictionary
         # rfo_print_log ("DEBUG: kWh Total: ", float(rfo_field["kWh_Tot"]))        # debug
         # rfo_print_log ("DEBUG: Amps Line 1: ", float(rfo_field["Amps_Ln_1"]))      # debug
-<<<<<<< HEAD
         # rfo_print_log ("DEBUG: RMS Volts Line 1: ", float(rfo_field["RMS_Volts_Ln_1"]))
-=======
-        # rfo_print_log ("DEBUG: RMS Volts Line 1: ", float(rfo_field["RMS_Volts_Ln_1"])) #debug
-
->>>>>>> 67c86697847d6004cefb1ddbc02e9c5ba5ebfd11
     	# Send to an adafruit.io feed a numeric value for each data element
         try:
             aio.send_data(rfo_kwh.key, float(rfo_field["kWh_Tot"]))
@@ -213,11 +176,7 @@ while True:
             rfo_print_log(err_str)
         except:
             rfo_print_log("Unknown error from aio.send()")
-<<<<<<< HEAD
-            aiofails += 1                           # increment the error counter once per cycle
-=======
             aiofails += 1                       # increment the error counter once per cycle
->>>>>>> 67c86697847d6004cefb1ddbc02e9c5ba5ebfd11
 
         try:
             aio.send_data(rfo_rms_volts_ln_1.key, float(rfo_field["RMS_Volts_Ln_1"]))
@@ -263,11 +222,7 @@ while True:
 
         rfo_print_log (rfo_field["Meter_Time"])
         if aiofails >= aiofaillimit:
-<<<<<<< HEAD
             rfo_print_log("AIO failures exceeded the limit - waiting for internet service.")
-=======
-            rfo_print_log("AIO failures exceeded the limit - waiting for internet.")
->>>>>>> 67c86697847d6004cefb1ddbc02e9c5ba5ebfd11
             wait_for_internet()
             aiofails = 0
             rfo_print_log("Internet back up, resuming.")
