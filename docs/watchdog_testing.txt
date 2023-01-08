@@ -1,0 +1,105 @@
+Testing log for setting up watchdog in ham-pi host
+
+6/12/2021
+TESTING STARTS
+sudo systemctl status watchdog
+# reports that watchdog is enabled but inactive
+
+sudo systemctl start watchdog
+# reports nothing, but log shows that it started correctly
+# LOGGING in /var/log/syslog
+
+sudo systemctl status watchdog
+● watchdog.service - watchdog daemon
+   Loaded: loaded (/lib/systemd/system/watchdog.service; enabled; vendor preset: enabled)
+   Active: active (running) since Sat 2021-06-12 08:05:38 PDT; 2s ago
+  Process: 9499 ExecStartPre=/bin/sh -c [ -z "${watchdog_module}" ] || [ "${watchdog_module}" = "none" ] || /
+  Process: 9500 ExecStart=/bin/sh -c [ $run_watchdog != 1 ] || exec /usr/sbin/watchdog $watchdog_options (cod
+ Main PID: 9502 (watchdog)
+    Tasks: 1 (limit: 4915)
+   CGroup: /system.slice/watchdog.service
+           └─9502 /usr/sbin/watchdog -v -q
+
+Jun 12 08:05:38 ham-pi watchdog[9502]: interface: no interface to check
+Jun 12 08:05:38 ham-pi watchdog[9502]: temperature: no sensors to check
+Jun 12 08:05:38 ham-pi watchdog[9502]: no test binary files
+Jun 12 08:05:38 ham-pi watchdog[9502]: no repair binary files
+Jun 12 08:05:38 ham-pi watchdog[9502]: error retry time-out = 60 seconds
+Jun 12 08:05:38 ham-pi watchdog[9502]: repair attempts = 1
+Jun 12 08:05:38 ham-pi watchdog[9502]: alive=[none] heartbeat=[none] to=root no_act=yes force=no
+Jun 12 08:05:38 ham-pi systemd[1]: Started watchdog daemon.
+
+REBOOT
+sudo reboot
+
+sudo systemctl status watchdog
+# reports active and up and running main PID 735
+
+# After reboot wd_keepalive reports enabled but inactive
+# Stopped watchdog, validated status was inactive
+# Waited 60 seconds 
+# Watchdog still inactive
+# Started wd_keepalive service
+sudo systemctl start wd_keepalive
+# Failed to start, no watchdog device configured, aborting
+# Watchdog device is in /etc/watchdog.conf and is commented
+# Systemd reported that it started wd_keepalive successfully but it's inactive status
+# /var/log/syslog reports that after stopping watchdog, wd_keepalive start process triggered
+# It failed but reported success.
+# Uncommented device configuration in /etc/watchdog.conf
+watchdog-device = /dev/watchdog
+# watchdog was still inactive, so restarted it and checked status
+# wd_keepalive is still inactive (dead)
+sudo systemctl start wd_keepalive
+# reports active and running but complains 'cannot set timeout 60 - invalid arg'
+# the new configuration in watchdog.conf of watchdog device worked, it starts OK
+# this error looks like it is related to setting the watchdog timeout to more than 15s
+# but I don't know where this is being set to 60 - some default behavior in code?
+
+# behavior to troubleshoot:
+# starting watchdog shuts down wd_keepalive
+# starting wd_keepalive shuts down watchdog
+# both are never running at the same time
+
+# with watchdog running and wd_keepalive inactive, killed the watchdog process
+# wd_keepalive became active while watchdog remains inactive for more than 60s and beyond
+# the watchdog log shows that there was an error when running the ExecStopPost script
+#   code=exited, status=1/FAILURE when running wd_keepalive
+# in /var/log/syslog the watchdog process reports the failure of the watchdog process
+# and the starting of the wd_keepalive process successfully.
+# I'm expecting the wd_keepalive to restart the watchdog process, but that doesn't happen
+
+# DISCOVERIES from reading the man page more carefully
+# 1. wd_keepalive sends a signal to the hardware watchdog more frequently than once every
+#     15 seconds to keep it from rebooting. It does no tests. It can be started at boot
+#     and is used to prevent a long start up of watchdog daemon from not updating the
+#     hardware watchdog and causing an unwanted reboot.  It has nothing to do with 
+#     restarting the watchdog daemon, as I thought.  It actually has the same function
+#     as the watchdog daemon except that it does no tests. That's why just one should
+#     be running at any time.
+# 2. The complaint on start of wd_keepalive that 'cannot set timeout 60' may be a default
+#     setting that is enabled if there is no setting in the watchdog.conf file. The man
+#     pages for watchdog and wd_keepalive all refer to updating the hardware watchdog no
+#     less frequently than every 60 seconds, but the Raspberry Pi hardware watchdog must
+#     be updated no less frequently than every 15 seconds. The interval setting in 
+#     watchdog.conf sets the time between executions of the watchdog test set and is 1 sec
+#     by default. By giving watchdog-timeout a value of 15 (seconds) in /etc/watchdog.conf
+#     we get rid of the error on start up for wd_keepalive.
+# 3. The realtime parameter definitely should be set (as noted above) to allow both
+#     watchdog and wd_keepalive to run under high load conditions. It causes these two 
+#     daemons to run in memory and to never be swapped out under high memory load conditions.
+# 4. In addition to the repair-binary parameter, test and repair scripts or programs can 
+#     be stored in /wtc/watchdog.d. Watchdog will discover them on start up and run them with
+#     a 'test' parameter. If the program returns anything other than '0' then watchdog calls
+#     the same program with 'repair' parameter and the error that the 'test' parameter 
+#     returned. This is different than the repair-binary parameter in watchdog.conf.  That
+#     program is called whenever watchdog decides a reboot is needed.  If the repair-binary
+#     returns '0' indicating that it successfully repaired the problem, watchdog does not
+#     reboot and continues. If it goes through this process more times than repair-retry
+#     times, then it reboots anyway.  If the repair-binary program returns anything other
+#     than '0', watchdog reboots.
+# 5. logtick parameter in watchdog.conf sets the number of interval(s) before a log message
+#     is written to /var/log/syslog. This reduces the amount of logging and CPU devoted
+#     to logging.
+# 6. The hardware watchdog device isn't documented in the man pages, but the logs are showing
+#     that the the hardware watchdog identity is Broadcom BCM2835 watchdog timer
