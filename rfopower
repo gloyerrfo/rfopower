@@ -16,6 +16,7 @@ import time                     # for delay and datetime stamp in log
 from Adafruit_IO import Client, Feed, Data, RequestError  # for REST client to adafruit.io
 from ekmmeters import *         # ekmmeters python library for talking to omnimeter
 import json                     # for json string parsing
+from prometheus_client import Gauge, start_http_server
 
 # Setup static variables
 ADAFRUIT_IO_USERNAME = 'georgel1'
@@ -28,6 +29,18 @@ RFO_LOG = '/home/pi/Projects/ekm/rfopower.log'
 aio = Client(ADAFRUIT_IO_USERNAME, ADAFRUIT_IO_KEY)
 aiofaillimit = 5
 aiofails = 0
+
+# create Gauges for prometheus
+g_kwh   = Gauge('kwh', 'KWH')
+g_v1    = Gauge('volts_line1', 'RMS Volts Line 1')
+g_v2    = Gauge('volts_line2', 'RMS Volts Line 2')
+g_a1    = Gauge('amps_line1', 'Amps Line 1')
+g_a2    = Gauge('amps_line2', 'Amps Line 2')
+g_w1    = Gauge('watts_line1', 'RMS Watts Line 1')
+g_w2    = Gauge('watts_line2', 'RMS Watts Line 2')
+
+# start the Prometheus http server at port 8000
+server, t = start_http_server(8000)
 
 def rfo_print_log(log_string):
     """
@@ -169,6 +182,17 @@ while True:
         # rfo_print_log ("DEBUG: kWh Total: ", float(rfo_field["kWh_Tot"]))        # debug
         # rfo_print_log ("DEBUG: Amps Line 1: ", float(rfo_field["Amps_Ln_1"]))      # debug
         # rfo_print_log ("DEBUG: RMS Volts Line 1: ", float(rfo_field["RMS_Volts_Ln_1"]))
+
+        # Send data to prometheus
+        g_kwh.set(float(rfo_field["kWh_Tot"]))
+        g_v1.set(float(rfo_field["RMS_Volts_Ln_1"]))
+        g_v2.set(float(rfo_field["RMS_Volts_Ln_2"]))
+        g_a1.set(float(rfo_field["Amps_Ln_1"]))
+        g_a2.set(float(rfo_field["Amps_Ln_2"]))
+        g_w1.set(float(rfo_field["RMS_Watts_Ln_1"]))
+        g_w2.set(float(rfo_field["RMS_Watts_Ln_2"]))
+
+
     	# Send to an adafruit.io feed a numeric value for each data element
         try:
             aio.send_data(rfo_kwh.key, float(rfo_field["kWh_Tot"]))
