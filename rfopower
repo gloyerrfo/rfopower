@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 """
 rfopower.py
     This python program interfaces a Raspberry pi to an
@@ -40,7 +40,7 @@ g_w1    = Gauge('watts_line1', 'RMS Watts Line 1')
 g_w2    = Gauge('watts_line2', 'RMS Watts Line 2')
 
 # start the Prometheus http server at port 8000
-server, t = start_http_server(8000)
+start_http_server(8000)
 
 def rfo_print_log(log_string):
     """
