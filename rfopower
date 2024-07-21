@@ -31,13 +31,13 @@ aiofaillimit = 5
 aiofails = 0
 
 # create Gauges for prometheus
-g_kwh   = Gauge('kwh', 'KWH')
-g_v1    = Gauge('volts_line1', 'RMS Volts Line 1')
-g_v2    = Gauge('volts_line2', 'RMS Volts Line 2')
-g_a1    = Gauge('amps_line1', 'Amps Line 1')
-g_a2    = Gauge('amps_line2', 'Amps Line 2')
-g_w1    = Gauge('watts_line1', 'RMS Watts Line 1')
-g_w2    = Gauge('watts_line2', 'RMS Watts Line 2')
+g_kwh   = Gauge('rfopower_kwh', 'KWH')
+g_v1    = Gauge('rfopower_volts_line1', 'RMS Volts Line 1')
+g_v2    = Gauge('rfopower_volts_line2', 'RMS Volts Line 2')
+g_a1    = Gauge('rfopower_amps_line1', 'Amps Line 1')
+g_a2    = Gauge('rfopower_amps_line2', 'Amps Line 2')
+g_w1    = Gauge('rfopower_watts_line1', 'RMS Watts Line 1')
+g_w2    = Gauge('rfopower_watts_line2', 'RMS Watts Line 2')
 
 # start the Prometheus http server at port 8000
 start_http_server(8000)
